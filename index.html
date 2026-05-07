@@ -199,9 +199,11 @@
     };
 
 
+    const now = new Date();
+
     const state = {
-      hour: 12,
-      minute: 0,
+      hour: now.getHours() % 12 || 12,
+      minute: now.getMinutes(),
       activeHand: null
     };
 
