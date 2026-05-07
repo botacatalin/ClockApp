@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Draggable Clock</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      --page: #f5f5f5;
+      --face: #fff;
+      --ink: #111;
+      --minute: #444;
+      --number-font: Arial, sans-serif;
+
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      font-family: Arial, sans-serif;
+      background: var(--page);
+      color: var(--ink);
+      user-select: none;
+    }
+
+    .app {
+      width: min(90vw, 420px);
+      text-align: center;
+    }
+
+    .time {
+      margin-bottom: 16px;
+      font-size: clamp(40px, 12vw, 64px);
+      font-weight: 700;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 2px solid var(--ink);
+      border-radius: 10px;
+      background: var(--face);
+      color: var(--ink);
+      font: 600 14px Arial, sans-serif;
+    }
+
+    .clock {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1;
+      border: 8px solid var(--ink);
+      border-radius: 50%;
+      background: var(--face);
+      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.12);
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    .mark,
+    .number,
+    .hand,
+    .center {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+    }
+
+    .mark {
+      width: 2px;
+      height: 8px;
+      background: var(--ink);
+      opacity: 0.35;
+      transform: translate(-50%, -50%) rotate(var(--angle));
+    }
+
+    .mark.major {
+      width: 4px;
+      height: 16px;
+      opacity: 1;
+    }
+
+    .number {
+      font-family: var(--number-font);
+      font-size: clamp(18px, 6vw, 28px);
+      font-weight: 700;
+      transform: translate(-50%, -50%);
+    }
+
+    .hand {
+      width: var(--w);
+      height: var(--h);
+      background: var(--bg);
+      border-radius: 999px;
+      transform-origin: 50% 100%;
+      transform: translate(-50%, -100%) rotate(var(--angle));
+      cursor: grab;
+      touch-action: none;
+      z-index: 2;
+    }
+
+    .hand:active {
+      cursor: grabbing;
+    }
+
+    .hour {
+      --w: 12px;
+      --h: 27%;
+      --bg: var(--ink);
+    }
+
+    .minute {
+      --w: 7px;
+      --h: 38%;
+      --bg: var(--minute);
+      z-index: 3;
+    }
+
+    .center {
+      width: 24px;
+      height: 24px;
+      background: var(--ink);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 4;
+    }
+
+    .hint {
+      margin-top: 18px;
+      color: var(--minute);
+      font-size: 14px;
+    }
+
+    @media (max-width: 420px) {
+      .controls {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <div class="time" id="time">12:00</div>
+
+    <div class="controls">
+      <select id="themeSelect" aria-label="Clock color theme">
+        <option value="classic">Classic</option>
+        <option value="ocean">Ocean</option>
+        <option value="forest">Forest</option>
+        <option value="sunset">Sunset</option>
+        <option value="grape">Grape</option>
+      </select>
+
+      <select id="faceSelect" aria-label="Clock face style">
+        <option value="arabicVerdana">Classic Arabic / Verdana</option>
+        <option value="romanClassic">Classic Roman</option>
+      </select>
+    </div>
+
+    <div class="clock" id="clock" aria-label="Draggable clock"></div>
+    <div class="hint">Drag the hour or minute hand.</div>
+  </main>
+
+  <script>
+    const $ = selector => document.querySelector(selector);
+    const clock = $("#clock");
+    const timeEl = $("#time");
+    const themeSelect = $("#themeSelect");
+    const faceSelect = $("#faceSelect");
+
+    const THEMES = {
+      classic: { page: "#f5f5f5", face: "#fff", ink: "#111", minute: "#444" },
+      ocean: { page: "#eaf6ff", face: "#fff", ink: "#075985", minute: "#0ea5e9" },
+      forest: { page: "#eef8ee", face: "#fff", ink: "#166534", minute: "#22c55e" },
+      sunset: { page: "#fff4e6", face: "#fff", ink: "#9a3412", minute: "#f97316" },
+      grape: { page: "#f6f0ff", face: "#fff", ink: "#581c87", minute: "#a855f7" }
+    };
+
+    const FACE_PRESETS = {
+      arabicVerdana: {
+        font: "Verdana, sans-serif",
+        labels: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"]
+      },
+      romanClassic: {
+        font: "Arial, sans-serif",
+        labels: ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"]
+      }
+    };
+
+
+    const state = {
+      hour: 12,
+      minute: 0,
+      activeHand: null
+    };
+
+    const pad = value => String(value).padStart(2, "0");
+    const setCss = (name, value) => document.body.style.setProperty(name, value);
+    const wrapHour = hour => ((hour - 1 + 12) % 12) + 1;
+    const angleToMinute = angle => Math.round(angle / 6) % 60;
+    const angleToHour = angle => wrapHour(Math.round(angle / 30));
+
+    function setTheme(name) {
+      Object.entries(THEMES[name]).forEach(([key, value]) => setCss(`--${key}`, value));
+    }
+
+
+    function createDiv(className, text = "") {
+      const div = document.createElement("div");
+      div.className = className;
+      div.textContent = text;
+      return div;
+    }
+
+    function positionOnClock(element, angle, radius) {
+      const radians = (angle - 90) * Math.PI / 180;
+      element.style.left = `${50 + Math.cos(radians) * radius}%`;
+      element.style.top = `${50 + Math.sin(radians) * radius}%`;
+      element.style.setProperty("--angle", `${angle}deg`);
+    }
+
+    function buildMarks() {
+      for (let i = 0; i < 60; i++) {
+        const mark = createDiv(i % 5 === 0 ? "mark major" : "mark");
+        positionOnClock(mark, i * 6, 47);
+        clock.append(mark);
+      }
+    }
+
+    function buildNumbers() {
+      FACE_PRESETS.arabicVerdana.labels.forEach((label, index) => {
+        const number = createDiv("number", label);
+        number.dataset.index = index;
+        positionOnClock(number, (index + 1) * 30, 39);
+        clock.append(number);
+      });
+    }
+
+    function setFace(name) {
+      const preset = FACE_PRESETS[name];
+      setCss("--number-font", preset.font);
+      document.querySelectorAll(".number").forEach(number => {
+        number.textContent = preset.labels[number.dataset.index];
+      });
+    }
+
+    function createHand(name) {
+      const hand = createDiv(`hand ${name}`);
+      hand.dataset.hand = name;
+      clock.append(hand);
+      return hand;
+    }
+
+    function buildClock() {
+      buildMarks();
+      buildNumbers();
+      const hands = { hour: createHand("hour"), minute: createHand("minute") };
+      clock.append(createDiv("center"));
+      return hands;
+    }
+
+    const hands = buildClock();
+
+    function render() {
+      hands.hour.style.setProperty("--angle", `${(state.hour % 12) * 30 + state.minute * 0.5}deg`);
+      hands.minute.style.setProperty("--angle", `${state.minute * 6}deg`);
+      timeEl.textContent = `${pad(state.hour)}:${pad(state.minute)}`;
+    }
+
+    function pointerAngle(event) {
+      const rect = clock.getBoundingClientRect();
+      const x = event.clientX - rect.left - rect.width / 2;
+      const y = event.clientY - rect.top - rect.height / 2;
+      return (Math.atan2(y, x) * 180 / Math.PI + 450) % 360;
+    }
+
+    function updateMinute(angle) {
+      const oldMinute = state.minute;
+      const newMinute = angleToMinute(angle);
+
+      if (oldMinute >= 45 && newMinute <= 15) state.hour = wrapHour(state.hour + 1);
+      if (oldMinute <= 15 && newMinute >= 45) state.hour = wrapHour(state.hour - 1);
+
+      state.minute = newMinute;
+    }
+
+    function updateHour(angle) {
+      state.hour = angleToHour(angle);
+    }
+
+    function updateTimeFromPointer(event) {
+      if (!state.activeHand) return;
+
+      const angle = pointerAngle(event);
+      state.activeHand === "minute" ? updateMinute(angle) : updateHour(angle);
+      render();
+    }
+
+    clock.addEventListener("pointerdown", event => {
+      const hand = event.target.closest(".hand");
+      if (!hand) return;
+
+      state.activeHand = hand.dataset.hand;
+      clock.setPointerCapture(event.pointerId);
+      updateTimeFromPointer(event);
+    });
+
+    clock.addEventListener("pointermove", updateTimeFromPointer);
+
+    clock.addEventListener("pointerup", event => {
+      state.activeHand = null;
+      if (clock.hasPointerCapture(event.pointerId)) clock.releasePointerCapture(event.pointerId);
+    });
+
+    clock.addEventListener("pointercancel", () => {
+      state.activeHand = null;
+    });
+
+    themeSelect.addEventListener("change", () => setTheme(themeSelect.value));
+    faceSelect.addEventListener("change", () => setFace(faceSelect.value));
+
+    setTheme("classic");
+    setFace("arabicVerdana");
+    render();
+  </script>
+</body>
+</html>
