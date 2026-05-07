@@ -102,6 +102,7 @@
       opacity: .62;
     }
 
+    .info-popup,
     .controls {
       position: absolute;
       bottom: calc(100% + 10px);
@@ -120,6 +121,40 @@
     .controls.open {
       display: grid;
       gap: 10px;
+    }
+
+    .info-popup {
+      bottom: calc(100% + 10px);
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(340px, 88vw);
+      padding: 18px;
+      text-align: left;
+    }
+
+    .info-popup.open {
+      display: block;
+    }
+
+    .info-popup h2 {
+      margin: 0 0 10px;
+      font-size: 20px;
+    }
+
+    .info-popup p,
+    .info-popup ul {
+      margin: 0 0 12px;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .info-popup ul {
+      padding-left: 20px;
+    }
+
+    .info-popup button {
+      width: 100%;
+      padding: 10px 12px;
     }
 
     select {
@@ -234,6 +269,7 @@
     <div class="clock" id="clock" aria-label="Draggable clock"></div>
 
     <div class="toolbar">
+      <button class="icon-button" id="infoButton" aria-label="About this clock app" aria-expanded="false">i</button>
       <button class="icon-button muted" id="toggleMinutes" aria-label="Toggle 5 minute labels">5</button>
       <button class="icon-button" id="toggleTime" aria-label="Toggle digital clock">👁</button>
       <button class="icon-button" id="menuButton" aria-label="Open options" aria-expanded="false">☰</button>
@@ -252,6 +288,19 @@
           <option value="roman">Classic Roman</option>
           <option value="minimal">Minimal Lines</option>
         </select>
+      </div>
+
+      <div class="info-popup" id="infoPopup" role="dialog" aria-modal="false" aria-labelledby="infoTitle">
+        <h2 id="infoTitle">About this clock</h2>
+        <p>This is a simple practice clock for learning how to tell time on an analog clock.</p>
+        <ul>
+          <li>Drag the short hand to set the hour.</li>
+          <li>Drag the long hand to set the minutes.</li>
+          <li>Use <strong>5</strong> to show or hide 5-minute helper labels.</li>
+          <li>Use the eye button to show or hide the digital time.</li>
+          <li>Use the menu to change colors and clock face style.</li>
+        </ul>
+        <button class="icon-button" id="closeInfo">Got it</button>
       </div>
     </div>
 
@@ -284,6 +333,9 @@
       time: $("#time"),
       menu: $("#controls"),
       menuButton: $("#menuButton"),
+      infoButton: $("#infoButton"),
+      infoPopup: $("#infoPopup"),
+      closeInfo: $("#closeInfo"),
       toggleTime: $("#toggleTime"),
       toggleMinutes: $("#toggleMinutes"),
       theme: $("#themeSelect"),
@@ -392,7 +444,19 @@
       render();
     }
 
+    function closeInfo() {
+      el.infoPopup.classList.remove("open");
+      el.infoButton.setAttribute("aria-expanded", "false");
+    }
+
+    function toggleInfo() {
+      closeMenu();
+      const isOpen = el.infoPopup.classList.toggle("open");
+      el.infoButton.setAttribute("aria-expanded", String(isOpen));
+    }
+
     function toggleMenu() {
+      closeInfo();
       const isOpen = el.menu.classList.toggle("open");
       el.menuButton.setAttribute("aria-expanded", String(isOpen));
     }
@@ -430,8 +494,16 @@
         toggleMenu();
       });
 
+      el.infoButton.addEventListener("click", event => {
+        event.stopPropagation();
+        toggleInfo();
+      });
+
+      el.closeInfo.addEventListener("click", closeInfo);
+
       document.addEventListener("click", event => {
         if (!el.menu.contains(event.target) && !el.menuButton.contains(event.target)) closeMenu();
+        if (!el.infoPopup.contains(event.target) && !el.infoButton.contains(event.target)) closeInfo();
       });
 
       el.theme.addEventListener("change", () => {
