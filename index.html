@@ -16,37 +16,40 @@
     body::after {
       content: "";
       position: fixed;
-      width: 34vmax;
-      height: 34vmax;
+      width: 24vmax;
+      height: 24vmax;
       border-radius: 50%;
       pointer-events: none;
-      opacity: .34;
-      filter: blur(28px);
-      transform: translate3d(0, 0, 0);
-      will-change: transform;
+      opacity: .42;
+      filter: blur(20px);
+      will-change: transform, opacity;
       z-index: 0;
     }
 
     body::before {
-      left: -12vmax;
-      top: -10vmax;
-      background: rgba(14, 165, 233, .35);
-      animation: floatOne 20s ease-in-out infinite alternate;
+      left: 6vw;
+      top: 10vh;
+      background: radial-gradient(circle, rgba(14, 165, 233, .38), rgba(34, 197, 94, .14) 55%, transparent 70%);
+      animation: floatOne 12s ease-in-out infinite;
     }
 
     body::after {
-      right: -14vmax;
-      bottom: -12vmax;
-      background: rgba(168, 85, 247, .28);
-      animation: floatTwo 24s ease-in-out infinite alternate;
+      right: 8vw;
+      bottom: 12vh;
+      background: radial-gradient(circle, rgba(168, 85, 247, .32), rgba(249, 115, 22, .13) 55%, transparent 70%);
+      animation: floatTwo 14s ease-in-out infinite;
     }
 
     @keyframes floatOne {
-      to { transform: translate3d(6vw, 4vh, 0); }
+      0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: .34; }
+      35% { transform: translate3d(16vw, 10vh, 0) scale(1.16); opacity: .48; }
+      70% { transform: translate3d(7vw, 26vh, 0) scale(.92); opacity: .28; }
     }
 
     @keyframes floatTwo {
-      to { transform: translate3d(-5vw, -5vh, 0); }
+      0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: .28; }
+      40% { transform: translate3d(-18vw, -8vh, 0) scale(1.12); opacity: .44; }
+      75% { transform: translate3d(-8vw, -24vh, 0) scale(.95); opacity: .30; }
     }
 
     body {
@@ -354,9 +357,9 @@
         </select>
 
         <select id="faceSelect" aria-label="Clock face style">
-          <option value="arabic">Classic Arabic / Verdana</option>
-          <option value="roman">Classic Roman</option>
-          <option value="minimal">Minimal Lines</option>
+          <option value="arabic">Arabic</option>
+          <option value="roman">Roman</option>
+          <option value="minimal">Minimal</option>
         </select>
 
         <button class="icon-button muted" id="toggleAnimation" type="button" aria-label="Toggle background animation">✦</button>
