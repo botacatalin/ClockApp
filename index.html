@@ -7,36 +7,46 @@
   <style>
     * { box-sizing: border-box; }
 
-    body.no-animation::before {
-      animation: none;
-      opacity: .22;
+    body.no-animation::before,
+    body.no-animation::after {
+      display: none;
     }
 
-    body::before {
+    body::before,
+    body::after {
       content: "";
       position: fixed;
-      inset: -25%;
+      width: 34vmax;
+      height: 34vmax;
+      border-radius: 50%;
       pointer-events: none;
-      background:
-        radial-gradient(circle at 18% 28%, rgba(14, 165, 233, .22), transparent 26%),
-        radial-gradient(circle at 82% 24%, rgba(168, 85, 247, .18), transparent 24%),
-        radial-gradient(circle at 70% 78%, rgba(34, 197, 94, .16), transparent 28%),
-        radial-gradient(circle at 30% 82%, rgba(249, 115, 22, .14), transparent 24%);
-      background-size: 120% 120%;
-      opacity: .9;
-      animation: drift 18s ease-in-out infinite alternate;
+      opacity: .34;
+      filter: blur(28px);
+      transform: translate3d(0, 0, 0);
+      will-change: transform;
       z-index: 0;
     }
 
-    @keyframes drift {
-      from {
-        transform: translate3d(-3%, -2%, 0) scale(1);
-        background-position: 0% 0%;
-      }
-      to {
-        transform: translate3d(3%, 2%, 0) scale(1.05);
-        background-position: 100% 100%;
-      }
+    body::before {
+      left: -12vmax;
+      top: -10vmax;
+      background: rgba(14, 165, 233, .35);
+      animation: floatOne 20s ease-in-out infinite alternate;
+    }
+
+    body::after {
+      right: -14vmax;
+      bottom: -12vmax;
+      background: rgba(168, 85, 247, .28);
+      animation: floatTwo 24s ease-in-out infinite alternate;
+    }
+
+    @keyframes floatOne {
+      to { transform: translate3d(6vw, 4vh, 0); }
+    }
+
+    @keyframes floatTwo {
+      to { transform: translate3d(-5vw, -5vh, 0); }
     }
 
     body {
@@ -417,7 +427,7 @@
       show24: false,
       face: "arabic",
       showDigital: true,
-      animateBackground: true
+      animateBackground: false
     };
 
     function createDiv(className, text = "") {
@@ -621,8 +631,8 @@
     }
 
     const hands = buildClock();
-    el.toggleAnimation.classList.add("active");
-    el.toggleAnimation.classList.remove("muted");
+
+    document.body.classList.add("no-animation");
 
     setTheme("classic");
     setFace("arabic");
