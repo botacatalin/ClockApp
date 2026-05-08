@@ -7,6 +7,38 @@
   <style>
     * { box-sizing: border-box; }
 
+    body.no-animation::before {
+      animation: none;
+      opacity: .22;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: -25%;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 18% 28%, rgba(14, 165, 233, .22), transparent 26%),
+        radial-gradient(circle at 82% 24%, rgba(168, 85, 247, .18), transparent 24%),
+        radial-gradient(circle at 70% 78%, rgba(34, 197, 94, .16), transparent 28%),
+        radial-gradient(circle at 30% 82%, rgba(249, 115, 22, .14), transparent 24%);
+      background-size: 120% 120%;
+      opacity: .9;
+      animation: drift 18s ease-in-out infinite alternate;
+      z-index: 0;
+    }
+
+    @keyframes drift {
+      from {
+        transform: translate3d(-3%, -2%, 0) scale(1);
+        background-position: 0% 0%;
+      }
+      to {
+        transform: translate3d(3%, 2%, 0) scale(1.05);
+        background-position: 100% 100%;
+      }
+    }
+
     body {
       --page: #f5f5f5;
       --face: #fff;
@@ -25,6 +57,8 @@
     }
 
     .app {
+      z-index: 1;
+      position: relative;
       width: min(92vw, 420px);
       display: flex;
       flex-direction: column;
@@ -37,6 +71,7 @@
       min-height: 64px;
       display: flex;
       justify-content: center;
+      align-items: center;
       margin-bottom: 14px;
     }
 
@@ -62,6 +97,13 @@
       box-shadow: 0 18px 45px rgba(0, 0, 0, 0.12);
       overflow: hidden;
       touch-action: none;
+    }
+
+    .corner-info {
+      position: absolute;
+      top: 0;
+      right: 0;
+      z-index: 20;
     }
 
     .toolbar {
@@ -165,6 +207,7 @@
     .mark,
     .number,
     .minute-label,
+    .hour24-label,
     .hand,
     .center {
       position: absolute;
@@ -187,7 +230,8 @@
     }
 
     .number,
-    .minute-label {
+    .minute-label,
+    .hour24-label {
       transform: translate(-50%, -50%);
       pointer-events: none;
       font-weight: 800;
@@ -198,13 +242,26 @@
       font-size: clamp(18px, 6vw, 28px);
     }
 
-    .minute-label {
+    .minute-label,
+    .hour24-label {
       display: none;
-      color: var(--minute);
-      font-size: clamp(10px, 3.3vw, 15px);
+      font-weight: 800;
+      line-height: 1;
     }
 
-    .show-minutes .minute-label {
+    .minute-label {
+      color: var(--minute);
+      font-size: clamp(10px, 3.1vw, 14px);
+    }
+
+    .hour24-label {
+      color: var(--ink);
+      font-size: clamp(9px, 2.8vw, 13px);
+      opacity: .72;
+    }
+
+    .show-minutes .minute-label,
+    .show-24 .hour24-label {
       display: block;
     }
 
@@ -249,7 +306,8 @@
     }
 
     .hint {
-      margin-top: 16px;
+      order: 10;
+      margin-top: 18px;
       color: var(--minute);
       font-size: 14px;
     }
@@ -266,13 +324,15 @@
       <div class="time" id="time">12:00</div>
     </div>
 
+    <button class="icon-button corner-info" id="infoButton" aria-label="About this clock app" aria-expanded="false">?</button>
+
     <div class="clock" id="clock" aria-label="Draggable clock"></div>
 
     <div class="toolbar">
-      <button class="icon-button" id="infoButton" aria-label="About this clock app" aria-expanded="false">i</button>
-      <button class="icon-button muted" id="toggleMinutes" aria-label="Toggle 5 minute labels">5</button>
-      <button class="icon-button" id="toggleTime" aria-label="Toggle digital clock">👁</button>
-      <button class="icon-button" id="menuButton" aria-label="Open options" aria-expanded="false">☰</button>
+      <button class="icon-button muted" id="toggleMinutes" aria-label="Toggle 5 minute labels">5′</button>
+      <button class="icon-button muted" id="toggle24" aria-label="Toggle 24-hour numbers">24</button>
+      <button class="icon-button" id="toggleTime" aria-label="Toggle digital clock">◉</button>
+      <button class="icon-button" id="menuButton" aria-label="Open options" aria-expanded="false">⚙</button>
 
       <div class="controls" id="controls">
         <select id="themeSelect" aria-label="Clock color theme">
@@ -288,6 +348,8 @@
           <option value="roman">Classic Roman</option>
           <option value="minimal">Minimal Lines</option>
         </select>
+
+        <button class="icon-button muted" id="toggleAnimation" type="button" aria-label="Toggle background animation">✦</button>
       </div>
 
       <div class="info-popup" id="infoPopup" role="dialog" aria-modal="false" aria-labelledby="infoTitle">
@@ -298,7 +360,8 @@
           <li>Drag the long hand to set the minutes.</li>
           <li>Use <strong>5</strong> to show or hide 5-minute helper labels.</li>
           <li>Use the eye button to show or hide the digital time.</li>
-          <li>Use the menu to change colors and clock face style.</li>
+          <li>Use <strong>24</strong> to overlay inner 24-hour values (13–24).</li>
+          <li>Use the gear button to change colors and clock face style.</li>
         </ul>
         <button class="icon-button" id="closeInfo">Got it</button>
       </div>
@@ -326,7 +389,8 @@
     const $$ = selector => [...document.querySelectorAll(selector)];
     const css = (name, value) => document.body.style.setProperty(name, value);
     const pad = value => String(value).padStart(2, "0");
-    const wrapHour = hour => ((hour - 1 + 12) % 12) + 1;
+    const wrapHour12 = hour => ((hour - 1 + 12) % 12) + 1;
+    const wrapHour24 = hour => ((hour % 24) + 24) % 24;
 
     const el = {
       clock: $("#clock"),
@@ -338,17 +402,22 @@
       closeInfo: $("#closeInfo"),
       toggleTime: $("#toggleTime"),
       toggleMinutes: $("#toggleMinutes"),
+      toggle24: $("#toggle24"),
+      toggleAnimation: $("#toggleAnimation"),
       theme: $("#themeSelect"),
       face: $("#faceSelect")
     };
 
     const now = new Date();
     const state = {
-      hour: now.getHours() % 12 || 12,
+      hour: now.getHours(),
       minute: now.getMinutes(),
       activeHand: null,
       showMinutes: false,
-      showDigital: true
+      show24: false,
+      face: "arabic",
+      showDigital: true,
+      animateBackground: true
     };
 
     function createDiv(className, text = "") {
@@ -370,10 +439,10 @@
     }
 
     function setFace(name) {
-      const face = FACES[name];
-      css("--number-font", face.font);
+      state.face = name;
+      css("--number-font", FACES[name].font);
       $$(".number").forEach(number => {
-        number.textContent = face.labels[number.dataset.index];
+        number.textContent = FACES[name].labels[number.dataset.index];
       });
     }
 
@@ -399,8 +468,13 @@
         fragment.append(number);
 
         const minuteLabel = createDiv("minute-label", hour === 12 ? "00" : String(hour * 5));
-        placeOnClock(minuteLabel, hour * 30, 30);
+        placeOnClock(minuteLabel, hour * 30, 31);
         fragment.append(minuteLabel);
+
+        const hour24Value = hour === 12 ? 12 : hour + 12;
+        const hour24Label = createDiv("hour24-label", String(hour24Value));
+        placeOnClock(hour24Label, hour * 30, 22);
+        fragment.append(hour24Label);
       }
 
       const hourHand = createDiv("hand hour");
@@ -425,14 +499,16 @@
       const oldMinute = state.minute;
       const newMinute = Math.round(angle / 6) % 60;
 
-      if (oldMinute >= 45 && newMinute <= 15) state.hour = wrapHour(state.hour + 1);
-      if (oldMinute <= 15 && newMinute >= 45) state.hour = wrapHour(state.hour - 1);
+      if (oldMinute >= 45 && newMinute <= 15) state.hour = wrapHour24(state.hour + 1);
+      if (oldMinute <= 15 && newMinute >= 45) state.hour = wrapHour24(state.hour - 1);
 
       state.minute = newMinute;
     }
 
     function setHourFromAngle(angle) {
-      state.hour = wrapHour(Math.round(angle / 30));
+      const selected = wrapHour12(Math.round(angle / 30));
+      const currentPeriod = state.hour >= 12 ? 12 : 0;
+      state.hour = selected === 12 ? currentPeriod : currentPeriod + selected;
     }
 
     function updateFromPointer(event) {
@@ -523,14 +599,31 @@
         el.toggleMinutes.classList.toggle("muted", !state.showMinutes);
       });
 
+      el.toggle24.addEventListener("click", () => {
+        state.show24 = !state.show24;
+        el.clock.classList.toggle("show-24", state.show24);
+        el.toggle24.classList.toggle("active", state.show24);
+        el.toggle24.classList.toggle("muted", !state.show24);
+      });
+
+      el.toggleAnimation.addEventListener("click", () => {
+        state.animateBackground = !state.animateBackground;
+        document.body.classList.toggle("no-animation", !state.animateBackground);
+        el.toggleAnimation.classList.toggle("active", state.animateBackground);
+        el.toggleAnimation.classList.toggle("muted", !state.animateBackground);
+      });
+
       el.toggleTime.addEventListener("click", () => {
         state.showDigital = !state.showDigital;
         el.time.style.visibility = state.showDigital ? "visible" : "hidden";
-        el.toggleTime.textContent = state.showDigital ? "👁" : "🙈";
+        el.toggleTime.textContent = state.showDigital ? "◉" : "○";
       });
     }
 
     const hands = buildClock();
+    el.toggleAnimation.classList.add("active");
+    el.toggleAnimation.classList.remove("muted");
+
     setTheme("classic");
     setFace("arabic");
     bindEvents();
