@@ -7,51 +7,6 @@
   <style>
     * { box-sizing: border-box; }
 
-    body.no-animation::before,
-    body.no-animation::after {
-      display: none;
-    }
-
-    body::before,
-    body::after {
-      content: "";
-      position: fixed;
-      width: 24vmax;
-      height: 24vmax;
-      border-radius: 50%;
-      pointer-events: none;
-      opacity: .42;
-      filter: blur(20px);
-      will-change: transform, opacity;
-      z-index: 0;
-    }
-
-    body::before {
-      left: 6vw;
-      top: 10vh;
-      background: radial-gradient(circle, rgba(14, 165, 233, .38), rgba(34, 197, 94, .14) 55%, transparent 70%);
-      animation: floatOne 12s ease-in-out infinite;
-    }
-
-    body::after {
-      right: 8vw;
-      bottom: 12vh;
-      background: radial-gradient(circle, rgba(168, 85, 247, .32), rgba(249, 115, 22, .13) 55%, transparent 70%);
-      animation: floatTwo 14s ease-in-out infinite;
-    }
-
-    @keyframes floatOne {
-      0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: .34; }
-      35% { transform: translate3d(16vw, 10vh, 0) scale(1.16); opacity: .48; }
-      70% { transform: translate3d(7vw, 26vh, 0) scale(.92); opacity: .28; }
-    }
-
-    @keyframes floatTwo {
-      0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: .28; }
-      40% { transform: translate3d(-18vw, -8vh, 0) scale(1.12); opacity: .44; }
-      75% { transform: translate3d(-8vw, -24vh, 0) scale(.95); opacity: .30; }
-    }
-
     body {
       --page: #f5f5f5;
       --face: #fff;
@@ -117,6 +72,7 @@
       top: 0;
       right: 0;
       z-index: 20;
+      opacity: .55;
     }
 
     .toolbar {
@@ -342,6 +298,7 @@
     <div class="clock" id="clock" aria-label="Draggable clock"></div>
 
     <div class="toolbar">
+      <button class="icon-button" id="resetTime" aria-label="Reset clock to 12:30">⟲</button>
       <button class="icon-button muted" id="toggleMinutes" aria-label="Toggle 5 minute labels">5′</button>
       <button class="icon-button muted" id="toggle24" aria-label="Toggle 24-hour numbers">24</button>
       <button class="icon-button" id="toggleTime" aria-label="Toggle digital clock">◉</button>
@@ -361,22 +318,25 @@
           <option value="roman">Roman</option>
           <option value="minimal">Minimal</option>
         </select>
-
-        <button class="icon-button muted" id="toggleAnimation" type="button" aria-label="Toggle background animation">✦</button>
       </div>
 
       <div class="info-popup" id="infoPopup" role="dialog" aria-modal="false" aria-labelledby="infoTitle">
-        <h2 id="infoTitle">About this clock</h2>
-        <p>This is a simple practice clock for learning how to tell time on an analog clock.</p>
+        <h2 id="infoTitle">Interactive Learning Clock</h2>
+        <p>
+          A simple hands-on clock designed to help children understand analog time by directly moving the clock hands.
+        </p>
+
         <ul>
-          <li>Drag the short hand to set the hour.</li>
-          <li>Drag the long hand to set the minutes.</li>
-          <li>Use <strong>5</strong> to show or hide 5-minute helper labels.</li>
-          <li>Use the eye button to show or hide the digital time.</li>
-          <li>Use <strong>24</strong> to overlay inner 24-hour values (13–24).</li>
-          <li>Use the gear button to change colors and clock face style.</li>
+          <li><strong>Drag the short hand</strong> to change the hour</li>
+          <li><strong>Drag the long hand</strong> to change the minutes</li>
+          <li><strong>⟲</strong> resets the clock to 12:30</li>
+          <li><strong>5′</strong> shows 5-minute helper values</li>
+          <li><strong>24</strong> overlays inner 24-hour values</li>
+          <li><strong>◉</strong> shows or hides the digital clock</li>
+          <li><strong>⚙</strong> changes colors and clock face styles</li>
         </ul>
-        <button class="icon-button" id="closeInfo">Got it</button>
+
+        <button class="icon-button" id="closeInfo">OK</button>
       </div>
     </div>
 
@@ -414,9 +374,9 @@
       infoPopup: $("#infoPopup"),
       closeInfo: $("#closeInfo"),
       toggleTime: $("#toggleTime"),
+      resetTime: $("#resetTime"),
       toggleMinutes: $("#toggleMinutes"),
       toggle24: $("#toggle24"),
-      toggleAnimation: $("#toggleAnimation"),
       theme: $("#themeSelect"),
       face: $("#faceSelect")
     };
@@ -430,7 +390,6 @@
       show24: false,
       face: "arabic",
       showDigital: true,
-      animateBackground: false
     };
 
     function createDiv(className, text = "") {
@@ -605,6 +564,12 @@
         closeMenu();
       });
 
+      el.resetTime.addEventListener("click", () => {
+        state.hour = 12;
+        state.minute = 30;
+        render();
+      });
+
       el.toggleMinutes.addEventListener("click", () => {
         state.showMinutes = !state.showMinutes;
         el.clock.classList.toggle("show-minutes", state.showMinutes);
@@ -619,13 +584,6 @@
         el.toggle24.classList.toggle("muted", !state.show24);
       });
 
-      el.toggleAnimation.addEventListener("click", () => {
-        state.animateBackground = !state.animateBackground;
-        document.body.classList.toggle("no-animation", !state.animateBackground);
-        el.toggleAnimation.classList.toggle("active", state.animateBackground);
-        el.toggleAnimation.classList.toggle("muted", !state.animateBackground);
-      });
-
       el.toggleTime.addEventListener("click", () => {
         state.showDigital = !state.showDigital;
         el.time.style.visibility = state.showDigital ? "visible" : "hidden";
@@ -634,8 +592,6 @@
     }
 
     const hands = buildClock();
-
-    document.body.classList.add("no-animation");
 
     setTheme("classic");
     setFace("arabic");
