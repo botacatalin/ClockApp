@@ -121,7 +121,9 @@
     }
 
     .icon-button.muted {
-      opacity: .62;
+      opacity: .34;
+      filter: grayscale(.25);
+      box-shadow: none;
     }
 
     .info-popup,
@@ -312,7 +314,7 @@
     <div class="clock" id="clock" aria-label="Draggable clock"></div>
 
     <div class="toolbar">
-      <button class="icon-button" id="resetTime" aria-label="Reset clock to 12:30">⟲</button>
+      <button class="icon-button muted" id="realClock" aria-label="Toggle real-time browser clock">⏱</button>
       <button class="icon-button muted" id="toggleMinutes" aria-label="Toggle 5 minute labels">5′</button>
       <button class="icon-button muted" id="toggle24" aria-label="Toggle 24-hour numbers">24</button>
       <button class="icon-button" id="toggleTime" aria-label="Toggle digital clock">◉</button>
@@ -343,7 +345,7 @@
         <ul>
           <li><strong>Drag the short hand</strong> to change the hour</li>
           <li><strong>Drag the long hand</strong> to change the minutes</li>
-          <li><strong>⟲</strong> resets the clock to 12:30</li>
+          <li><strong>⏱</strong> shows the real browser time and keeps the clock running</li>
           <li><strong>5′</strong> shows 5-minute helper values</li>
           <li><strong>24</strong> overlays inner 24-hour values</li>
           <li><strong>◉</strong> shows or hides the digital clock</li>
@@ -392,7 +394,7 @@
       infoPopup: $("#infoPopup"),
       closeInfo: $("#closeInfo"),
       toggleTime: $("#toggleTime"),
-      resetTime: $("#resetTime"),
+      realClock: $("#realClock"),
       toggleMinutes: $("#toggleMinutes"),
       toggle24: $("#toggle24"),
       theme: $("#themeSelect"),
@@ -408,6 +410,8 @@
       show24: false,
       face: "arabic",
       showDigital: true,
+      realClock: false,
+      timer: null,
     };
 
     function createDiv(className, text = "") {
@@ -434,6 +438,40 @@
       $$(".number").forEach(number => {
         number.textContent = FACES[name].labels[number.dataset.index];
       });
+    }
+
+    function setFromBrowserTime() {
+      const now = new Date();
+      state.hour = now.getHours();
+      state.minute = now.getMinutes();
+    }
+
+    function setToggle(button, active) {
+      button.classList.toggle("active", active);
+      button.classList.toggle("muted", !active);
+    }
+
+    function stopRealClock() {
+      state.realClock = false;
+      clearInterval(state.timer);
+      state.timer = null;
+      setToggle(el.realClock, false);
+    }
+
+    function startRealClock() {
+      state.realClock = true;
+      setFromBrowserTime();
+      render();
+      clearInterval(state.timer);
+      state.timer = setInterval(() => {
+        setFromBrowserTime();
+        render();
+      }, 1000);
+      setToggle(el.realClock, true);
+    }
+
+    function toggleRealClock() {
+      state.realClock ? stopRealClock() : startRealClock();
     }
 
     function render() {
@@ -539,6 +577,7 @@
         const hand = event.target.closest(".hand");
         if (!hand) return;
 
+        stopRealClock();
         state.activeHand = hand.dataset.hand;
         el.clock.setPointerCapture(event.pointerId);
         updateFromPointer(event);
@@ -584,30 +623,24 @@
         closeMenu();
       });
 
-      el.resetTime.addEventListener("click", () => {
-        state.hour = 12;
-        state.minute = 30;
-        render();
-      });
+      el.realClock.addEventListener("click", toggleRealClock);
 
       el.toggleMinutes.addEventListener("click", () => {
         state.showMinutes = !state.showMinutes;
         el.clock.classList.toggle("show-minutes", state.showMinutes);
-        el.toggleMinutes.classList.toggle("active", state.showMinutes);
-        el.toggleMinutes.classList.toggle("muted", !state.showMinutes);
+        setToggle(el.toggleMinutes, state.showMinutes);
       });
 
       el.toggle24.addEventListener("click", () => {
         state.show24 = !state.show24;
         el.clock.classList.toggle("show-24", state.show24);
-        el.toggle24.classList.toggle("active", state.show24);
-        el.toggle24.classList.toggle("muted", !state.show24);
+        setToggle(el.toggle24, state.show24);
       });
 
       el.toggleTime.addEventListener("click", () => {
         state.showDigital = !state.showDigital;
         el.time.style.visibility = state.showDigital ? "visible" : "hidden";
-        el.toggleTime.textContent = state.showDigital ? "◉" : "○";
+        el.toggleTime.textContent = state.showDigital ? "◉" : "🙈";
       });
     }
 
