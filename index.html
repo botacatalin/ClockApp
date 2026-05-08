@@ -350,6 +350,7 @@
           <li><strong>⚙</strong> changes colors and clock face styles</li>
         </ul>
 
+        
 
         <button class="icon-button" id="closeInfo">OK</button>
       </div>
@@ -462,7 +463,7 @@
         placeOnClock(minuteLabel, hour * 30, 31);
         fragment.append(minuteLabel);
 
-        const hour24Value = hour === 12 ? 12 : hour + 12;
+        const hour24Value = hour === 12 ? 24 : hour + 12;
         const hour24Label = createDiv("hour24-label", String(hour24Value));
         placeOnClock(hour24Label, hour * 30, 22);
         fragment.append(hour24Label);
