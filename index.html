@@ -48,11 +48,22 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: clamp(38px, 11vw, 64px);
-      font-weight: 800;
-      line-height: 1;
+      gap: 8px;
       font-variant-numeric: tabular-nums;
       white-space: nowrap;
+    }
+
+    .time-hour {
+      font-size: clamp(42px, 12vw, 72px);
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .time-minute {
+      font-size: clamp(36px, 10vw, 60px);
+      font-weight: 800;
+      opacity: .82;
+      line-height: 1;
     }
 
     .clock {
@@ -290,7 +301,10 @@
 <body>
   <main class="app">
     <div class="topbar">
-      <div class="time" id="time">12:00</div>
+      <div class="time" id="time">
+        <span class="time-hour" id="timeHour">12</span>
+        <span class="time-minute" id="timeMinute">:00</span>
+      </div>
     </div>
 
     <button class="icon-button corner-info" id="infoButton" aria-label="About this clock app" aria-expanded="false">?</button>
@@ -336,6 +350,7 @@
           <li><strong>⚙</strong> changes colors and clock face styles</li>
         </ul>
 
+
         <button class="icon-button" id="closeInfo">OK</button>
       </div>
     </div>
@@ -368,6 +383,8 @@
     const el = {
       clock: $("#clock"),
       time: $("#time"),
+      timeHour: $("#timeHour"),
+      timeMinute: $("#timeMinute"),
       menu: $("#controls"),
       menuButton: $("#menuButton"),
       infoButton: $("#infoButton"),
@@ -421,7 +438,9 @@
     function render() {
       hands.hour.style.setProperty("--angle", `${(state.hour % 12) * 30 + state.minute * 0.5}deg`);
       hands.minute.style.setProperty("--angle", `${state.minute * 6}deg`);
-      el.time.textContent = `${pad(state.hour)}:${pad(state.minute)}`;
+      const displayHour = ((state.hour + 11) % 12) + 1;
+      el.timeHour.textContent = displayHour;
+      el.timeMinute.textContent = `:${pad(state.minute)}`;
     }
 
     function buildClock() {
